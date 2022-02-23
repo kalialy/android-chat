@@ -101,6 +101,7 @@ import cn.wildfirechat.model.ProtoMomentsFeed;
 import cn.wildfirechat.model.ProtoMomentsMedia;
 import cn.wildfirechat.model.ProtoReadEntry;
 import cn.wildfirechat.model.ProtoUserInfo;
+import cn.wildfirechat.model.ProtoUserOnlineState;
 import cn.wildfirechat.model.ReadEntry;
 import cn.wildfirechat.model.UnreadCount;
 import cn.wildfirechat.model.UserInfo;
@@ -123,6 +124,7 @@ public class ClientService extends Service implements SdtLogic.ICallBack,
     ProtoLogic.IFriendListUpdateCallback,
     ProtoLogic.IGroupInfoUpdateCallback,
     ProtoLogic.IConferenceEventCallback,
+    ProtoLogic.IOnlineEventCallback,
     ProtoLogic.IChannelInfoUpdateCallback, ProtoLogic.IGroupMembersUpdateCallback {
     private Map<Integer, Class<? extends MessageContent>> contentMapper = new HashMap<>();
 
@@ -612,6 +614,18 @@ public class ClientService extends Service implements SdtLogic.ICallBack,
         public void getMessagesAsync(Conversation conversation, long fromIndex, boolean before, int count, String withUser, IGetMessageCallback callback) throws RemoteException {
             ProtoMessage[] protoMessages = ProtoLogic.getMessages(conversation.type.ordinal(), conversation.target, conversation.line, fromIndex, before, count, withUser);
             safeMessagesCallback(protoMessages, before, callback);
+            String[] ss = {conversation.target};
+            ProtoLogic.watchOnlineState(conversation.type.ordinal(), ss, 3600, new ProtoLogic.IWatchOnlineStateCallback() {
+                @Override
+                public void onSuccess(ProtoUserOnlineState[] protoUserOnlineStates) {
+                    android.util.Log.d("ddd", "onSuccess");
+                }
+
+                @Override
+                public void onFailure(int i) {
+                    android.util.Log.d("ddd", "onFailure");
+                }
+            });
         }
 
         @Override
@@ -2867,6 +2881,7 @@ public class ClientService extends Service implements SdtLogic.ICallBack,
         ProtoLogic.setTrafficDataCallback(ClientService.this);
         ProtoLogic.setReceiveMessageCallback(ClientService.this);
         ProtoLogic.setConferenceEventCallback(ClientService.this);
+        ProtoLogic.setOnlineEventCallback(ClientService.this);
         Log.i(TAG, "Proto connect:" + userName);
         ProtoLogic.setAuthInfo(userName, userPwd);
         return ProtoLogic.connect(mHost);
@@ -3345,6 +3360,13 @@ public class ClientService extends Service implements SdtLogic.ICallBack,
                 }
             }
             onConferenceEventListenerRemoteCallbackList.finishBroadcast();
+        });
+    }
+
+    @Override
+    public void onOnlineEvent(ProtoUserOnlineState[] protoUserOnlineStates) {
+        handler.post(() -> {
+
         });
     }
 
