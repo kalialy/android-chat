@@ -7,6 +7,8 @@ package cn.wildfirechat.remote;
 
 import static android.content.Context.BIND_AUTO_CREATE;
 
+import static cn.wildfirechat.remote.UserSettingScope.CustomState;
+
 import android.app.Application;
 import android.content.ComponentName;
 import android.content.Context;
@@ -75,8 +77,10 @@ import cn.wildfirechat.client.IOnReceiveMessageListener;
 import cn.wildfirechat.client.IOnSettingUpdateListener;
 import cn.wildfirechat.client.IOnTrafficDataListener;
 import cn.wildfirechat.client.IOnUserInfoUpdateListener;
+import cn.wildfirechat.client.IOnlineEventListener;
 import cn.wildfirechat.client.IRemoteClient;
 import cn.wildfirechat.client.IUploadMediaCallback;
+import cn.wildfirechat.client.IUserOnlineStateCallback;
 import cn.wildfirechat.client.NotInitializedExecption;
 import cn.wildfirechat.message.CallStartMessageContent;
 import cn.wildfirechat.message.CardMessageContent;
@@ -152,7 +156,9 @@ import cn.wildfirechat.model.NullUserInfo;
 import cn.wildfirechat.model.PCOnlineInfo;
 import cn.wildfirechat.model.ReadEntry;
 import cn.wildfirechat.model.UnreadCount;
+import cn.wildfirechat.model.UserCustomState;
 import cn.wildfirechat.model.UserInfo;
+import cn.wildfirechat.model.UserOnlineState;
 
 /**
  * Created by WF Chat on 2017/12/11.
@@ -216,6 +222,7 @@ public class ChatManager {
     private List<OnMessageDeliverListener> messageDeliverListeners = new ArrayList<>();
     private List<OnMessageReadListener> messageReadListeners = new ArrayList<>();
     private List<OnConferenceEventListener> conferenceEventListeners = new ArrayList<>();
+    private List<OnlineEventListener> onlineEventListeners = new ArrayList<>();
 
     // key = userId
     private LruCache<String, UserInfo> userInfoCache;
@@ -627,6 +634,14 @@ public class ChatManager {
         });
     }
 
+    private void onOnlineEvent(List<UserOnlineState> states) {
+        mainHandler.post(() -> {
+            for (OnlineEventListener listener : onlineEventListeners) {
+                listener.onOnlineEvents(states);
+            }
+        });
+    }
+
     /**
      * 添加新消息监听, 记得调用{@link #removeOnReceiveMessageListener(OnReceiveMessageListener)}删除监听
      *
@@ -854,6 +869,31 @@ public class ChatManager {
         onTrafficDataListeners.remove(listener);
     }
 
+    /**
+     * 添加在线事件监听
+     *
+     * @param listener
+     */
+    public void addOnlineEventListener(OnlineEventListener listener) {
+        if (listener == null) {
+            return;
+        }
+        if (!onlineEventListeners.contains(listener)) {
+            onlineEventListeners.add(listener);
+        }
+    }
+
+    /**
+     * 删除在线事件监听
+     *
+     * @param listener
+     */
+    public void removeOnlineEventListener(OnlineEventListener listener) {
+        if (listener == null) {
+            return;
+        }
+        onlineEventListeners.remove(listener);
+    }
 
     /**
      * 启用国密加密，需要在connect之前调用，需要IM服务开启国密才可以使用。
@@ -6103,6 +6143,8 @@ public class ChatManager {
      */
     public void setUserSetting(int scope, String key, String value, final GeneralCallback callback) {
         if (!checkRemoteService()) {
+            if (callback != null)
+                callback.onFail(ErrorCode.SERVICE_DIED);
             return;
         }
 
@@ -6157,6 +6199,8 @@ public class ChatManager {
      */
     public void setConversationSilent(Conversation conversation, boolean silent, GeneralCallback callback) {
         if (!checkRemoteService()) {
+            if (callback != null)
+                callback.onFail(ErrorCode.SERVICE_DIED);
             return;
         }
 
@@ -6185,6 +6229,95 @@ public class ChatManager {
         } catch (RemoteException e) {
             e.printStackTrace();
         }
+    }
+
+    public UserOnlineState getUserOnlineState(String userId) throws RemoteException {
+        if (!checkRemoteService()) {
+            return new UserOnlineState(userId);
+        }
+        return mClient.getUserOnlineState(userId);
+    }
+
+    public void watchOnlineState(Conversation.ConversationType conversationType, List<String> targets, int duration, WatchOnlineStateCallback callback) {
+        if (!checkRemoteService()) {
+            if (callback != null)
+                callback.onFail(ErrorCode.SERVICE_DIED);
+            return;
+        }
+
+        try {
+            mClient.watchOnlineState(conversationType.ordinal(), targets, duration, new IUserOnlineStateCallback.Stub() {
+                @Override
+                public void onSuccess(List<UserOnlineState> states) throws RemoteException {
+                    mainHandler.post(() -> {
+                        if (callback != null) {
+                            callback.onSuccess(states);
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(int errorCode) throws RemoteException {
+                    mainHandler.post(() -> {
+                        if (callback != null) {
+                            callback.onFail(errorCode);
+                        }
+                    });
+                }
+            });
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void unwatchOnlineState(Conversation.ConversationType conversationType, List<String> targets, GeneralCallback callback) {
+        if (!checkRemoteService()) {
+            if (callback != null)
+                callback.onFail(ErrorCode.SERVICE_DIED);
+            return;
+        }
+
+        try {
+            mClient.unwatchOnlineState(conversationType.ordinal(), targets, new IGeneralCallback.Stub() {
+                @Override
+                public void onSuccess() throws RemoteException {
+                    mainHandler.post(() -> {
+                        if (callback != null) {
+                            callback.onSuccess();
+                        }
+                    });
+                }
+
+                @Override
+                public void onFailure(int errorCode) throws RemoteException {
+                    if (callback != null) {
+                        mainHandler.post(() -> callback.onFail(errorCode));
+                    }
+                }
+            });
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public UserCustomState getMyCustomState() throws RemoteException {
+        String csSetting = getUserSetting(CustomState, "");
+        if(!TextUtils.isEmpty(csSetting)) {
+            int index = csSetting.indexOf("-");
+            if(index > 0) {
+                String c1 = csSetting.substring(0, index);
+                String c2 = csSetting.substring(index+1);
+                return new UserCustomState(Integer.parseInt(c1), c2);
+            }
+        }
+
+        return new UserCustomState();
+    }
+
+    public void setMyCustomState(int customState, String customText, GeneralCallback callback) throws RemoteException {
+        String csSetting = customState + "-" + customText;
+        setUserSetting(CustomState, "", csSetting, callback);
     }
 
     /**
@@ -6295,6 +6428,18 @@ public class ChatManager {
             boolean isReceiptEnabled = mClient.isReceiptEnabled();
             receiptStatus = isReceiptEnabled ? 1 : 0;
             return isReceiptEnabled;
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public boolean isEnableUserOnlineState() {
+        if (!checkRemoteService()) {
+            return false;
+        }
+        try {
+            return mClient.isEnableUserOnlineState();
         } catch (RemoteException e) {
             e.printStackTrace();
         }
@@ -7287,6 +7432,12 @@ public class ChatManager {
                     @Override
                     public void onTrafficData(long send, long recv) throws RemoteException {
                         ChatManager.this.onTrafficData(send, recv);
+                    }
+                });
+                mClient.setOnlineEventListener(new IOnlineEventListener.Stub() {
+                    @Override
+                    public void onOnlineEvent(List<UserOnlineState> states) throws RemoteException {
+                        ChatManager.this.onOnlineEvent(states);
                     }
                 });
 

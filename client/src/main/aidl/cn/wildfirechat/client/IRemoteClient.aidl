@@ -25,7 +25,7 @@ import cn.wildfirechat.client.IGetUserCallback;
 import cn.wildfirechat.client.IGetGroupCallback;
 import cn.wildfirechat.client.IGetGroupMemberCallback;
 import cn.wildfirechat.client.IGetConversationListCallback;
-
+import cn.wildfirechat.client.IUserOnlineStateCallback;
 
 import cn.wildfirechat.client.IOnFriendUpdateListener;
 import cn.wildfirechat.client.IOnGroupInfoUpdateListener;
@@ -36,6 +36,7 @@ import cn.wildfirechat.client.IOnUserInfoUpdateListener;
 import cn.wildfirechat.client.IOnChannelInfoUpdateListener;
 import cn.wildfirechat.client.IOnConferenceEventListener;
 import cn.wildfirechat.client.IOnTrafficDataListener;
+import cn.wildfirechat.client.IOnlineEventListener;
 
 import cn.wildfirechat.message.Message;
 import cn.wildfirechat.message.core.MessagePayload;
@@ -52,7 +53,7 @@ import cn.wildfirechat.model.UserInfo;
 import cn.wildfirechat.model.GroupMember;
 import cn.wildfirechat.model.GroupInfo;
 import cn.wildfirechat.model.ChannelInfo;
-
+import cn.wildfirechat.model.UserOnlineState;
 
 import java.util.List;
 import java.util.Map;
@@ -85,6 +86,7 @@ interface IRemoteClient {
     oneway void setOnSettingUpdateListener(in IOnSettingUpdateListener listener);
     oneway void setOnChannelInfoUpdateListener(in IOnChannelInfoUpdateListener listener);
     oneway void setOnConferenceEventListener(in IOnConferenceEventListener listener);
+    oneway void setOnlineEventListener(IOnlineEventListener listener);
 
     oneway void setOnTrafficDataListener(in IOnTrafficDataListener listener);
 
@@ -237,7 +239,12 @@ interface IRemoteClient {
     oneway void destoryChannel(in String channelId, in IGeneralCallback callback);
     List<String> getMyChannels();
     List<String> getListenedChannels();
+
+    UserOnlineState getUserOnlineState(in String userId);
+    oneway void watchOnlineState(in int conversationType, in List<String> targets, in int duration, in IUserOnlineStateCallback callback);
+    oneway void unwatchOnlineState(in int conversationType, in List<String> targets, in IGeneralCallback callback);
     oneway void requireLock(in String lockId, in long duration, in IGeneralCallback callback);
+
     oneway void releaseLock(in String lockId, in IGeneralCallback callback);
 
     String getImageThumbPara();
@@ -256,6 +263,7 @@ interface IRemoteClient {
     boolean isCommercialServer();
     boolean isReceiptEnabled();
     boolean isGlobalDisableSyncDraft();
+    boolean isEnableUserOnlineState();
     void sendConferenceRequest(in long sessionId, in String roomId, in String request, in boolean advanced, in String data, in IGeneralCallback2 callback);
     void useSM4();
 }

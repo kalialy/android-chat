@@ -37,6 +37,10 @@ public interface UserSettingScope {
     int DisableSyncDraft = 20;
     //不能直接使用，协议栈内会使用此值
     int VoipSilent = 21;
+    //不能直接使用，协议栈内会使用此值
+    int PTT_Reserved = 22;
+    //不能直接使用，协议栈内会使用此值
+    int CustomState = 23;
 
 
 

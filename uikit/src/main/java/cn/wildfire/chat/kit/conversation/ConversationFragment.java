@@ -38,6 +38,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.afollestad.materialdialogs.MaterialDialog;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -80,8 +81,11 @@ import cn.wildfirechat.model.ConversationInfo;
 import cn.wildfirechat.model.GroupInfo;
 import cn.wildfirechat.model.GroupMember;
 import cn.wildfirechat.model.UserInfo;
+import cn.wildfirechat.model.UserOnlineState;
 import cn.wildfirechat.remote.ChatManager;
+import cn.wildfirechat.remote.GeneralCallback;
 import cn.wildfirechat.remote.UserSettingScope;
+import cn.wildfirechat.remote.WatchOnlineStateCallback;
 
 public class ConversationFragment extends Fragment implements
     KeyboardAwareLinearLayout.OnKeyboardShownListener,
@@ -458,6 +462,19 @@ public class ConversationFragment extends Fragment implements
         }
         conversationViewModel.clearUnreadStatus(conversation);
 
+        if(ChatManager.Instance().isEnableUserOnlineState()) {
+            ChatManager.Instance().watchOnlineState(conversation.type, Arrays.asList(conversation.target), 3600, new WatchOnlineStateCallback() {
+                @Override
+                public void onSuccess(List<UserOnlineState> onlineStates) {
+                    Log.d(TAG, "watch success");
+                }
+
+                @Override
+                public void onFail(int errorCode) {
+                    Log.d(TAG, "watch failed:" + errorCode);
+                }
+            });
+        }
         setTitle();
     }
 
@@ -751,6 +768,19 @@ public class ConversationFragment extends Fragment implements
 
         unInitGroupObservers();
         inputPanel.onDestroy();
+        if(ChatManager.Instance().isEnableUserOnlineState()) {
+            ChatManager.Instance().unwatchOnlineState(conversation.type, Arrays.asList(conversation.target), new GeneralCallback() {
+                @Override
+                public void onSuccess() {
+                    Log.d(TAG, "unwatch success");
+                }
+
+                @Override
+                public void onFail(int errorCode) {
+                    Log.d(TAG, "unwatch failed:" + errorCode);
+                }
+            });
+        }
     }
 
     boolean onBackPressed() {
