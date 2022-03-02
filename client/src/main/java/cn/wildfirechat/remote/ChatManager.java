@@ -6,7 +6,6 @@ package cn.wildfirechat.remote;
 
 
 import static android.content.Context.BIND_AUTO_CREATE;
-
 import static cn.wildfirechat.remote.UserSettingScope.CustomState;
 
 import android.app.Application;
@@ -2206,7 +2205,7 @@ public class ChatManager {
 
     /**
      * 获取会话列表
-     *
+     * <p>
      * 由于 ipc 大小限制，有丢失会话风险，建议使用 {@link ChatManager#getConversationListAsync}
      *
      * @param conversationTypes 获取哪些类型的会话
@@ -2255,8 +2254,8 @@ public class ChatManager {
         if (!checkRemoteService()) {
             Log.e(TAG, "Remote service not available");
         }
-        if (callback == null){
-            return ;
+        if (callback == null) {
+            return;
         }
 
         if (conversationTypes == null || conversationTypes.size() == 0 ||
@@ -2280,16 +2279,16 @@ public class ChatManager {
                 @Override
                 public void onSuccess(List<ConversationInfo> infos, boolean hasMore) throws RemoteException {
                     convs.addAll(infos);
-                   if (!hasMore){
-                       mainHandler.post(()-> {
-                           callback.onSuccess(convs);
-                       });
-                   }
+                    if (!hasMore) {
+                        mainHandler.post(() -> {
+                            callback.onSuccess(convs);
+                        });
+                    }
                 }
 
                 @Override
                 public void onFailure(int errorCode) throws RemoteException {
-                    mainHandler.post(()-> callback.onFail(errorCode));
+                    mainHandler.post(() -> callback.onFail(errorCode));
                 }
             });
         } catch (RemoteException e) {
@@ -2801,12 +2800,12 @@ public class ChatManager {
 
     /**
      * 获取远程历史消息
-     * @discussion 获取得到的消息数目有可能少于指定的count数，如果count不为0就意味着还有更多的消息可以获取，只有获取到的消息数为0才表示没有更多的消息了。
      *
      * @param conversation     会话
      * @param beforeMessageUid 起始消息的消息uid
      * @param count            获取消息的条数
      * @param callback
+     * @discussion 获取得到的消息数目有可能少于指定的count数，如果count不为0就意味着还有更多的消息可以获取，只有获取到的消息数为0才表示没有更多的消息了。
      */
     public void getRemoteMessages(Conversation conversation, List<Integer> contentTypes, long beforeMessageUid, int count, GetRemoteMessageCallback callback) {
         if (!checkRemoteService()) {
@@ -2865,7 +2864,7 @@ public class ChatManager {
                 public void onSuccess(List<Message> messages, boolean hasMore) throws RemoteException {
                     if (callback != null) {
                         outMsgs.addAll(messages);
-                        if (!hasMore){
+                        if (!hasMore) {
                             mainHandler.post(() -> {
                                 callback.onSuccess(messages.get(0));
                             });
@@ -3466,7 +3465,7 @@ public class ChatManager {
 
         try {
             ConversationInfo conversationInfo = getConversation(conversation);
-            if (conversationInfo == null || TextUtils.equals(draft, conversationInfo.draft)){
+            if (conversationInfo == null || TextUtils.equals(draft, conversationInfo.draft)) {
                 return;
             }
             mClient.setConversationDraft(conversation.type.ordinal(), conversation.target, conversation.line, draft);
@@ -4151,11 +4150,11 @@ public class ChatManager {
 
     /**
      * 获取群信息
-     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群会话中时使用一次true。
      *
      * @param groupId
      * @param refresh
      * @return
+     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群会话中时使用一次true。
      */
     public @Nullable
     GroupInfo getGroupInfo(String groupId, boolean refresh) {
@@ -4181,11 +4180,11 @@ public class ChatManager {
 
     /**
      * 获取群信息
-     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群会话中时使用一次true。
      *
      * @param groupId
      * @param refresh
      * @param callback
+     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群会话中时使用一次true。
      */
     public void getGroupInfo(String groupId, boolean refresh, GetGroupInfoCallback callback) {
         if (!checkRemoteService()) {
@@ -4365,11 +4364,11 @@ public class ChatManager {
 
     /**
      * 获取用户信息
-     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此人的单聊会话中时或者此人的用户信息页面使用一次true。
      *
      * @param userId
      * @param refresh
      * @return
+     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此人的单聊会话中时或者此人的用户信息页面使用一次true。
      */
     public UserInfo getUserInfo(String userId, boolean refresh) {
         return getUserInfo(userId, null, refresh);
@@ -4377,12 +4376,12 @@ public class ChatManager {
 
     /**
      * 当对应用户，本地不存在时，返回的{@link UserInfo}为{@link NullUserInfo}
-     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此人的单聊会话中时或者此人的用户信息页面使用一次true。
      *
      * @param userId
      * @param groupId
      * @param refresh
      * @return
+     * @discussion refresh 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此人的单聊会话中时或者此人的用户信息页面使用一次true。
      */
     public UserInfo getUserInfo(String userId, String groupId, boolean refresh) {
         if (TextUtils.isEmpty(userId)) {
@@ -5577,11 +5576,11 @@ public class ChatManager {
 
     /**
      * 获取群成员列表
-     * @discussion forceUpdate 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群成员列表时使用一次true。
      *
      * @param groupId
      * @param forceUpdate
      * @return
+     * @discussion forceUpdate 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群成员列表时使用一次true。
      */
     public List<GroupMember> getGroupMembers(String groupId, boolean forceUpdate) {
         if (!checkRemoteService()) {
@@ -5618,11 +5617,11 @@ public class ChatManager {
 
     /**
      * 获取群成员列表
-     * @discussion forceUpdate 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群成员列表时使用一次true。
      *
      * @param groupId
      * @param forceUpdate
      * @param callback
+     * @discussion forceUpdate 为true会导致一次网络同步，代价特别大，应该尽量避免使用true，仅当在进入此群成员列表时使用一次true。
      */
     public void getGroupMembers(String groupId, boolean forceUpdate, GetGroupMembersCallback callback) {
         if (!checkRemoteService()) {
@@ -6303,11 +6302,11 @@ public class ChatManager {
 
     public UserCustomState getMyCustomState() throws RemoteException {
         String csSetting = getUserSetting(CustomState, "");
-        if(!TextUtils.isEmpty(csSetting)) {
+        if (!TextUtils.isEmpty(csSetting)) {
             int index = csSetting.indexOf("-");
-            if(index > 0) {
+            if (index > 0) {
                 String c1 = csSetting.substring(0, index);
-                String c2 = csSetting.substring(index+1);
+                String c2 = csSetting.substring(index + 1);
                 return new UserCustomState(Integer.parseInt(c1), c2);
             }
         }
@@ -6315,7 +6314,7 @@ public class ChatManager {
         return new UserCustomState();
     }
 
-    public void setMyCustomState(int customState, String customText, GeneralCallback callback) throws RemoteException {
+    public void setMyCustomState(int customState, String customText, GeneralCallback callback) {
         String csSetting = customState + "-" + customText;
         setUserSetting(CustomState, "", csSetting, callback);
     }
