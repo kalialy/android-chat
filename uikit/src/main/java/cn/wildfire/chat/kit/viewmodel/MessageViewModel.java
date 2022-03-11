@@ -273,7 +273,13 @@ public class MessageViewModel extends ViewModel implements OnReceiveMessageListe
     public void sendMessage(Message message) {
         // the call back would be called on the ui thread
         message.sender = ChatManager.Instance().getUserId();
-        ChatManager.Instance().sendMessage(message, null);
+
+        if(message.content instanceof TextMessageContent) {
+            message = ChatManager.Instance().insertMessage(message.conversation, ChatManager.Instance().getUserId(), message.content, MessageStatus.Sending, true, 0);
+            ChatManager.Instance().sendSavedMessage(message, 0, null);
+        } else {
+            ChatManager.Instance().sendMessage(message, null);
+        }
     }
 
     public void sendTextMsg(Conversation conversation, TextMessageContent txtContent) {
