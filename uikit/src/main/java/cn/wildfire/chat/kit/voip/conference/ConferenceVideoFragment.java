@@ -27,8 +27,16 @@ import androidx.lifecycle.ViewModelProviders;
 
 import com.afollestad.materialdialogs.MaterialDialog;
 
+import org.webrtc.Camera1Enumerator;
+import org.webrtc.CameraEnumerator;
+import org.webrtc.CapturerObserver;
+import org.webrtc.EglBase;
+import org.webrtc.Logging;
 import org.webrtc.RendererCommon;
 import org.webrtc.StatsReport;
+import org.webrtc.SurfaceTextureHelper;
+import org.webrtc.VideoCapturer;
+import org.webrtc.VideoFrame;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +85,8 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
     @BindView(R2.id.shareScreenImageView)
     ImageView shareScreenImageView;
 
+    private boolean setToNone = true;
+
 
     private List<String> participants;
     private UserInfo me;
@@ -85,6 +95,8 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
     // TODO 移除，并将VoipBaseActivity.focusVideoUserId 修改为static
     private String focusVideoUserId;
     private VoipCallItem focusConferenceItem;
+
+    private VideoCapturer videoCapturer;
 
 
     private final RendererCommon.ScalingType scalingType = RendererCommon.ScalingType.SCALE_ASPECT_BALANCED;
@@ -126,6 +138,28 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
         manageParticipantTextView.setText("管理(" + (session.getParticipantProfiles().size() + 1) + ")");
         rootLinearLayout.setOnClickListener(clickListener);
         startHideBarTimer();
+
+        videoCapturer = createCameraCapturer(new Camera1Enumerator(false));
+        SurfaceTextureHelper textureHelper = SurfaceTextureHelper.create(Thread.currentThread().getName(), EglBase.create().getEglBaseContext());
+        videoCapturer.initialize(textureHelper, getContext(), new CapturerObserver() {
+            @Override
+            public void onCapturerStarted(boolean b) {
+                session.onExternalVideoSourceCapturerStarted(b);
+            }
+
+            @Override
+            public void onCapturerStopped() {
+                session.onExternalVideoSourceCapturerStopped();
+            }
+
+            @Override
+            public void onFrameCaptured(VideoFrame videoFrame) {
+                // TODO 可以再次对 videoFrame 进行处理
+                session.onExternalVideoSourceFrameCaptured(videoFrame);
+            }
+        });
+
+        videoCapturer.startCapture(640, 480, 15);
     }
 
     private void updateControlStatus() {
@@ -298,6 +332,14 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
                     .show();
             } else {
                 session.leaveConference(false);
+            }
+        }
+
+        if (videoCapturer != null) {
+            try {
+                videoCapturer.stopCapture();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -581,6 +623,13 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
                     bottomPanel.setVisibility(View.GONE);
                     topBarView.setVisibility(View.GONE);
                 }
+//                AVEngineKit.CallSession session = getEngineKit().getCurrentSession();
+//                if (setToNone){
+//                    session.setParticipantVideoType(userId, false, AVEngineKit.VideoType.VIDEO_TYPE_NONE);
+//                }else {
+//                    session.setParticipantVideoType(userId, false, AVEngineKit.VideoType.VIDEO_TYPE_BIG_STREAM);
+//                }
+//                setToNone = !setToNone;
             }
         }
     };
@@ -657,5 +706,44 @@ public class ConferenceVideoFragment extends BaseConferenceFragment implements A
         super.onStop();
         handler.removeCallbacks(hideBarCallback);
         handler.removeCallbacks(updateCallDurationRunnable);
+    }
+
+
+    private VideoCapturer createCameraCapturer(CameraEnumerator enumerator) {
+        final String[] deviceNames = enumerator.getDeviceNames();
+
+        // First, try to find front facing camera
+        Logging.d(TAG, "Looking for front facing cameras.");
+        for (String deviceName : deviceNames) {
+            if (enumerator.isFrontFacing(deviceName)) {
+                Logging.d(TAG, "Creating front facing camera capturer.");
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+//                    if (currentSession != null) {
+//                        currentSession.isCameraFront = true;
+//                    }
+                    return videoCapturer;
+                }
+            }
+        }
+
+        // Front facing camera not found, try something else
+        Logging.d(TAG, "Looking for other cameras.");
+        for (String deviceName : deviceNames) {
+            if (!enumerator.isFrontFacing(deviceName)) {
+                Logging.d(TAG, "Creating other camera capturer.");
+                VideoCapturer videoCapturer = enumerator.createCapturer(deviceName, null);
+
+                if (videoCapturer != null) {
+//                    if (currentSession != null) {
+//                        currentSession.isCameraFront = false;
+//                    }
+                    return videoCapturer;
+                }
+            }
+        }
+
+        return null;
     }
 }

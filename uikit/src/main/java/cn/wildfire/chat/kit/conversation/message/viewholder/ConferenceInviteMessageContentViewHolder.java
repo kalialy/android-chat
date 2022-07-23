@@ -66,7 +66,8 @@ public class ConferenceInviteMessageContentViewHolder extends NormalMessageConte
             Toast.makeText(fragment.getActivity(), "本版本不支持会议功能", Toast.LENGTH_SHORT).show();
             return;
         }
-        AVEngineKit.Instance().joinConference(inviteMessageContent.getCallId(), inviteMessageContent.isAudioOnly(), inviteMessageContent.getPin(), inviteMessageContent.getHost(), inviteMessageContent.getTitle(), inviteMessageContent.getDesc(), inviteMessageContent.isAudience(), inviteMessageContent.isAdvanced(), false, false, null);
+       AVEngineKit.CallSession session =  AVEngineKit.Instance().joinConference(inviteMessageContent.getCallId(), inviteMessageContent.isAudioOnly(), inviteMessageContent.getPin(), inviteMessageContent.getHost(), inviteMessageContent.getTitle(), inviteMessageContent.getDesc(), inviteMessageContent.isAudience(), inviteMessageContent.isAdvanced(), false, false, null);
+        session.setUseExternalVideoSource(true);
         Intent intent = new Intent(fragment.getActivity(), ConferenceActivity.class);
         fragment.startActivity(intent);
     }
